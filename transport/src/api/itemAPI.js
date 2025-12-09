@@ -5,9 +5,10 @@ export const masterAPI = {
     // Changed to 'cbranch' to match original
     const res = await apiClient.get("/api/warehousemastercontroller/material", {
       params: {
-        orgid,
+        cbranch,
         client,
-        cbranch, // Use 'cbranch' instead of 'branchcode'
+        orgid,
+        // Use 'cbranch' instead of 'branchcode'
       },
     });
 
@@ -20,6 +21,13 @@ export const masterAPI = {
       res?.paramObjectsMap?.materialVO ||
       []
     );
+  },
+
+  getAllGroups: async (orgId) => {
+    const response = await apiClient.get(
+      `/api/warehousemastercontroller/group?orgid=${orgId}`
+    );
+    return response.data || response;
   },
 
   saveItem: async (payload) => {

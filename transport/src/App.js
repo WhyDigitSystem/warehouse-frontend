@@ -44,6 +44,35 @@ import { ToastProvider } from "./components/Toast/ToastContext";
 import SupplierMaster from "./components/masters/supplier/SupplierMaster";
 import UnitMaster from "./components/masters/unit/UnirMaster";
 import StateMaster from "./components/masters/state/StateMaster";
+import GatePassInPage from "./components/inbound/GatePassin/Gatepassin";
+import CityMaster from "./components/masters/city/CityMaster";
+import WarehouseMaster from "./components/masters/warehouse/warehouseMaster";
+import User from "./components/masters/user/User";
+import EmployeeMasterPage from "./components/masters/employee/EmployeeMaster";
+import WarehouseLocation from "./components/masters/warehouselocation/WarehouseLocationMaster";
+import GRNPage from "./components/inbound/GRN/GRN";
+import Putaway from "./components/inbound/Putaway/Putaway";
+import BuyerOrderPage from "./components/outbound/BuyerOrder/BuyerOrder";
+import PickRequestForm from "./components/outbound/PickRequest/PickRequestForm";
+import PickRequestPage from "./components/outbound/PickRequest/PickRequest";
+import MultiBuyerOrder from "./components/outbound/MuliBO/MultiBuyerOrder";
+import MultiPickRequestPage from "./components/outbound/MultiPR/MultiPickRequest";
+import ReversePickPage from "./components/outbound/ReversePick/ReversePick";
+import DeliveryChallanPage from "./components/outbound/DeliveryChallan/DeliveryChallan";
+import LocationMovementPage from "./components/stock-process/LocationMovement/LocationMovement";
+import StockRestatePage from "./components/stock-process/StockRestate/StockRestate";
+import CodeConversionPage from "./components/stock-process/CodeConversion/CodeConversion";
+import CycleCountPage from "./components/stock-process/CycleCount/CycleCount";
+import OpeningStockPage from "./components/stock-process/OpeningStock/OpeningStock";
+import StockConsolidation from "./components/reports/StockReports/StockConsolidation";
+import StockConsolidationBinWise from "./components/reports/StockReports/StockConsolidationBinWise";
+import StockLedger from "./components/reports/StockReports/StockLedger";
+import StockBatchWise from "./components/reports/StockReports/StockBatchWise";
+import StockBinBatchStatusWise from "./components/reports/StockReports/StockBinBatch";
+import KittingPage from "./components/stock-process/Kitting/Kitting";
+import DeKittingPage from "./components/stock-process/DeKitting/Dekitting";
+import VasPickPage from "./components/stock-process/VAS Pick/VASPick";
+import VasPutawayPage from "./components/stock-process/VAS Putaway/VASPutaway";
 
 // Theme initializer component
 const ThemeInitializer = () => {
@@ -156,6 +185,113 @@ const AppContent = () => {
                       <Route path="/unit" element={<UnitMaster />} />
 
                       <Route path="/state" element={<StateMaster />} />
+
+                      <Route path="/city" element={<CityMaster />} />
+
+                      <Route
+                        path="/warehouse-location"
+                        element={<WarehouseLocation />}
+                      />
+                      <Route path="/inbound/grn" element={<GRNPage />} />
+                      <Route path="/inbound/putaway" element={<Putaway />} />
+                      <Route
+                        path="/outbound/buyer-order"
+                        element={<BuyerOrderPage />}
+                      />
+
+                      <Route
+                        path="/outbound/multi-buyer-order"
+                        element={<MultiBuyerOrder />}
+                      />
+
+                      <Route
+                        path="/outbound/multi-pick-request"
+                        element={<MultiPickRequestPage />}
+                      />
+                      <Route
+                        path="/outbound/pick-request"
+                        element={<PickRequestPage />}
+                      />
+
+                      <Route
+                        path="/outbound/reverse-pick"
+                        element={<ReversePickPage />}
+                      />
+
+                      <Route
+                        path="/outbound/delivery-challan"
+                        element={<DeliveryChallanPage />}
+                      />
+
+                      <Route
+                        path="/stock/location-movement"
+                        element={<LocationMovementPage />}
+                      />
+
+                      <Route
+                        path="/stock/stock-restate"
+                        element={<StockRestatePage />}
+                      />
+
+                      <Route
+                        path="/stock/code-conversion"
+                        element={<CodeConversionPage />}
+                      />
+
+                      <Route
+                        path="/stock/cycle-count"
+                        element={<CycleCountPage />}
+                      />
+
+                      <Route
+                        path="/stock/opening-stock"
+                        element={<OpeningStockPage />}
+                      />
+
+                      <Route
+                        path="/reports/stock-consolidation"
+                        element={<StockConsolidation />}
+                      />
+                      <Route
+                        path="/reports/stock-consolidation-binwise"
+                        element={<StockConsolidationBinWise />}
+                      />
+
+                      <Route
+                        path="/reports/stock-batch-wise"
+                        element={<StockBatchWise />}
+                      />
+
+                      <Route
+                        path="/reports/stock-bin-batch-status"
+                        element={<StockBinBatchStatusWise />}
+                      />
+
+                      <Route
+                        path="/reports/stock-ledger"
+                        element={<StockLedger />}
+                      />
+
+                      <Route path="/vas/kitting" element={<KittingPage />} />
+
+                      <Route
+                        path="/vas/dekitting"
+                        element={<DeKittingPage />}
+                      />
+
+                      <Route path="/vas/pick" element={<VasPickPage />} />
+
+                      <Route path="/vas/putaway" element={<VasPutawayPage />} />
+                      <Route path="/user" element={<User />} />
+                      <Route
+                        path="/employee"
+                        element={<EmployeeMasterPage />}
+                      />
+                      <Route path="/warehouse" element={<WarehouseMaster />} />
+                      <Route
+                        path="/inbound/gatepass-in"
+                        element={<GatePassInPage />}
+                      />
                     </Routes>
                   </Layout>
                 </ProtectedRoute>

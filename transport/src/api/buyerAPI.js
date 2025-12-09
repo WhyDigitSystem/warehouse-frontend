@@ -1,3 +1,4 @@
+// buyerAPI.js - Add alias functions
 import apiClient from "./apiClient";
 
 export const buyerAPI = {
@@ -64,6 +65,11 @@ export const buyerAPI = {
     );
   },
 
+  // Add alias for getAllCountries
+  getAllCountries: async (orgid) => {
+    return buyerAPI.getCountries(orgid);
+  },
+
   // Get states
   getStates: async (orgid, country) => {
     const response = await apiClient.get("/api/commonmaster/state", {
@@ -77,6 +83,22 @@ export const buyerAPI = {
     );
   },
 
+  // Get states - UPDATED to return full response
+  // Get states - RETURN FULL RESPONSE
+  getState: async (orgid, country) => {
+    const res = await apiClient.get("/api/commonmaster/state/country", {
+      params: { orgid, country },
+    });
+    return res?.paramObjectsMap?.stateVO ?? [];
+  },
+
+  getCity: async (orgid, state) => {
+    const res = await apiClient.get("/api/commonmaster/city/state", {
+      params: { orgid, state },
+    });
+    return res?.paramObjectsMap?.cityVO ?? [];
+  },
+
   getAllUnits: async (orgId) => {
     try {
       const response = await apiClient.get(`/units?orgId=${orgId}`);
@@ -85,16 +107,11 @@ export const buyerAPI = {
       throw error;
     }
   },
-  // Get cities
-  getCities: async (orgid, state) => {
-    const response = await apiClient.get("/api/commonmaster/city/state", {
-      params: { orgid, state },
-    });
 
-    return (
-      response?.data?.paramObjectsMap?.cityVO ||
-      response?.paramObjectsMap?.cityVO ||
-      []
-    );
+  // Get cities
+
+  // Add alias for getAllCities
+  getAllCities: async (state, orgid) => {
+    return buyerAPI.getCities(orgid, state);
   },
 };

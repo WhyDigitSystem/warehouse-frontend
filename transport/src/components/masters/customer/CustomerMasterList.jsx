@@ -1,47 +1,42 @@
-import { ArrowLeft, Pencil, Plus, Search } from "lucide-react";
+import { Pencil, Plus, Search } from "lucide-react";
 import { useEffect, useState } from "react";
 import { masterAPI } from "../../../api/customerAPI";
 
-const CountryMasterList = ({ onAddNew, onEdit, onBack }) => {
+const CustomerMasterList = ({ onAddNew, onEdit }) => {
   const [search, setSearch] = useState("");
   const [list, setList] = useState([]);
   const [loading, setLoading] = useState(true);
+
   const ORG_ID = 1000000001;
 
   useEffect(() => {
-    loadCountries();
+    fetchCustomers();
   }, []);
 
-  const loadCountries = async () => {
+  const fetchCustomers = async () => {
     try {
       setLoading(true);
-      const response = await masterAPI.getCountries(ORG_ID);
-      setList(response);
-    } catch (e) {
-      console.error("Failed to load countries", e);
+      const data = await masterAPI.getCustomer(ORG_ID);
+      console.log("Customer List API →", data);
+      setList(data);
+    } catch (err) {
+      console.error("Error loading customers:", err);
     } finally {
       setLoading(false);
     }
   };
 
-  const filtered = list.filter((country) =>
-    country.countryName.toLowerCase().includes(search.toLowerCase())
+  const filtered = list.filter((cust) =>
+    cust.customerName.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
     <div className="max-w-6xl mx-auto bg-gray-50 dark:bg-gray-900 p-4">
-      
       {/* Header */}
       <div className="flex justify-between items-center mb-4">
-        <div className="flex items-center gap-3">
-          <ArrowLeft
-            className="h-5 w-5 cursor-pointer text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition"
-            onClick={onBack}
-          />
-          <h1 className="text-lg font-semibold text-gray-900 dark:text-white">
-            Country Master
-          </h1>
-        </div>
+        <h1 className="text-lg font-semibold text-gray-900 dark:text-white">
+          Customer Master
+        </h1>
 
         <button
           onClick={onAddNew}
@@ -63,7 +58,7 @@ const CountryMasterList = ({ onAddNew, onEdit, onBack }) => {
         <Search className="h-4 w-4 text-gray-400" />
         <input
           type="text"
-          placeholder="Search countries…"
+          placeholder="Search…"
           className="bg-transparent text-sm w-full outline-none text-gray-800 dark:text-gray-200"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -73,7 +68,7 @@ const CountryMasterList = ({ onAddNew, onEdit, onBack }) => {
       {/* Loading Indicator */}
       {loading && (
         <p className="text-center text-sm text-gray-500 dark:text-gray-400">
-          Loading countries…
+          Loading customers…
         </p>
       )}
 
@@ -90,8 +85,13 @@ const CountryMasterList = ({ onAddNew, onEdit, onBack }) => {
             <thead>
               <tr className="bg-gray-100 dark:bg-gray-800 text-xs text-gray-600 dark:text-gray-300">
                 <th className="p-2 text-left w-14">S.No</th>
-                <th className="p-2 text-left font-medium">Code</th>
-                <th className="p-2 text-left font-medium">Country</th>
+                <th className="p-2 text-left font-medium">Customer</th>
+                <th className="p-2 text-left font-medium">POC name</th>
+                <th className="p-2 text-left font-medium">Email</th>
+                <th className="p-2 text-left font-medium">Mobile No</th>
+                <th className="p-2 text-left font-medium">City</th>
+                <th className="p-2 text-left font-medium">Clients</th>
+                <th className="p-2 text-left font-medium">Branches</th>
                 <th className="p-2 text-left font-medium">Status</th>
                 <th className="p-2 text-center font-medium">Action</th>
               </tr>
@@ -99,51 +99,46 @@ const CountryMasterList = ({ onAddNew, onEdit, onBack }) => {
 
             {/* Rows */}
             <tbody>
-              {filtered.map((country, i) => (
+              {filtered.map((cust, i) => (
                 <tr
-                  key={i}
+                  key={cust.id}
                   className="border-t border-gray-200 dark:border-gray-700 
-                  bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200
-                  hover:bg-gray-50 dark:hover:bg-gray-800/50 transition"
+                  bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200"
                 >
                   <td className="p-2">{i + 1}</td>
-                  <td className="p-2">{country.countryCode}</td>
-                  <td className="p-2">{country.countryName}</td>
+                  <td className="p-2">{cust.customerName}</td>
+                  <td className="p-2">{cust.contactPerson}</td>
+                  <td className="p-2">{cust.emailId}</td>
+                  <td className="p-2">{cust.mobileNumber}</td>
+                  <td className="p-2">{cust.city}</td>
+                  {/* Client count */}
+                  <td className="p-2">{cust.clientVO?.length ?? 0}</td>
+
+                  {/* Branch count */}
+                  <td className="p-2">{cust.clientBranchVO?.length ?? 0}</td>
 
                   {/* Status */}
                   <td className="p-2">
                     <span
                       className={`px-2 py-0.5 rounded-md text-xs font-medium 
                         ${
-                          country.active === "Active"
+                          cust.active === "Active"
                             ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300"
                             : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300"
                         }`}
                     >
-                      {country.active}
+                      {cust.active}
                     </span>
                   </td>
 
-                  <td className="p-2 flex justify-center">
+                  <td className="p-2 flex justify-center gap-3">
                     <Pencil
-                      className="h-4 w-4 text-blue-500 hover:text-blue-600 cursor-pointer transition"
-                      onClick={() => onEdit(country)}
+                      className="h-4 w-4 text-blue-500 hover:text-blue-600 cursor-pointer"
+                      onClick={() => onEdit(cust)}
                     />
                   </td>
                 </tr>
               ))}
-
-              {/* Empty State */}
-              {filtered.length === 0 && !loading && (
-                <tr>
-                  <td
-                    colSpan={5}
-                    className="p-4 text-center text-gray-500 dark:text-gray-400"
-                  >
-                    {search ? "No countries found matching your search" : "No countries found"}
-                  </td>
-                </tr>
-              )}
             </tbody>
           </table>
         </div>
@@ -152,4 +147,4 @@ const CountryMasterList = ({ onAddNew, onEdit, onBack }) => {
   );
 };
 
-export default CountryMasterList;
+export default CustomerMasterList;

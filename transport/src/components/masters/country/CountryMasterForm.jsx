@@ -1,5 +1,6 @@
 import { ArrowLeft, Save, X } from "lucide-react";
 import { useState } from "react";
+import { FloatingInput } from "../../../utils/InputFields";
 import { masterAPI } from "../../../api/customerAPI";
 
 const CountryMasterForm = ({ data, onBack }) => {
@@ -10,26 +11,48 @@ const CountryMasterForm = ({ data, onBack }) => {
     active: data?.active === "Active" ? true : false,
   });
 
-
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState({});
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setForm({ ...form, [name]: type === "checkbox" ? checked : value });
+    
+    // Clear field error when user starts typing
+    if (fieldErrors[name]) {
+      setFieldErrors(prev => ({ ...prev, [name]: "" }));
+    }
+    
+    setForm({ ...form, [name]: type === "checkbox" ? checked : value.toUpperCase() });
   };
 
   const handleSave = async () => {
+    // Basic validation
+    const errors = {};
+    if (!form.countryCode.trim()) errors.countryCode = "Country Code is required";
+    if (!form.countryName.trim()) errors.countryName = "Country Name is required";
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      return;
+    }
+
+    setIsSubmitting(true);
+
     const payload = {
-      ...(data?.id && { id: data?.id }),
+      ...(data?.id && { id: data?.id }), // Only include id if editing
       orgId: 1000000001,
-      countryCode: form.countryCode,
-      countryName: form.countryName,
+      countryCode: form.countryCode.toUpperCase(),
+      countryName: form.countryName.toUpperCase(),
       active: form.active ? true : false,
       cancel: false,
       createdBy: "ITC001",
     };
 
+    console.log("📤 Saving Country Payload:", payload);
+
     try {
       const response = await masterAPI.saveCountry(payload);
+      console.log("📥 Save Response:", response);
 
       alert(
         data ? "Country Updated successfully!" : "Country saved successfully!"
@@ -38,78 +61,79 @@ const CountryMasterForm = ({ data, onBack }) => {
     } catch (error) {
       console.error("Save error:", error);
       alert("Failed to save country.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="p-4 max-w-4xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center gap-3 mb-4">
-        <ArrowLeft
-          className="h-5 w-5 cursor-pointer text-gray-600 dark:text-gray-300"
+    <div className="p-4 max-w-7xl mx-auto">
+      {/* HEADER */}
+      <div className="flex items-center gap-2 mb-4">
+        <button
           onClick={onBack}
-        />
+          className="p-1 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+        >
+          <ArrowLeft className="h-4 w-4" />
+        </button>
         <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
           {data ? "Edit Country" : "Add Country"}
         </h2>
       </div>
 
-      {/* Card */}
-      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6 shadow-sm">
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-          {/* Country Code */}
-          <input
-            type="text"
+      {/* MAIN CARD */}
+      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+        {/* MAIN FORM GRID */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+          <FloatingInput
+            label="Country Code *"
             name="countryCode"
-            placeholder="Code"
             value={form.countryCode}
             onChange={handleChange}
-            className="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 
-            dark:border-gray-700 bg-white dark:bg-gray-900"
+            error={fieldErrors.countryCode}
+            required
           />
-
-          {/* Country Name */}
-          <input
-            type="text"
+          
+          <FloatingInput
+            label="Country Name *"
             name="countryName"
-            placeholder="Name"
             value={form.countryName}
             onChange={handleChange}
-            className="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 
-            dark:border-gray-700 bg-white dark:bg-gray-900"
+            error={fieldErrors.countryName}
+            required
           />
 
-          {/* Active */}
-          <label className="flex items-center gap-2 mt-2">
+          {/* ACTIVE CHECKBOX */}
+          <div className="flex items-center gap-2 p-1">
             <input
               type="checkbox"
               name="active"
               checked={form.active}
               onChange={handleChange}
-              className="h-4 w-4"
+              className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
             />
-            <span className="text-sm text-gray-700 dark:text-gray-300">
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
               Active
             </span>
-          </label>
+          </div>
         </div>
 
-        {/* Buttons */}
-        <div className="flex justify-end gap-3 mt-6">
+        {/* ACTION BUTTONS */}
+        <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
           <button
             onClick={onBack}
-            className="flex items-center gap-1 px-4 py-2 text-sm bg-gray-200 
-            dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-md"
+            disabled={isSubmitting}
+            className="flex items-center gap-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded text-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
           >
-            <X className="h-4 w-4" /> Cancel
+            <X className="h-3 w-3" /> Cancel
           </button>
-
           <button
             onClick={handleSave}
-            className="flex items-center gap-1 px-4 py-2 text-sm bg-purple-600 text-white 
-            rounded-md hover:bg-purple-700"
+            disabled={isSubmitting}
+            className="flex items-center gap-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Save className="h-4 w-4" /> Save
+            <Save className="h-3 w-3" /> 
+            {isSubmitting ? "Saving..." : (data ? "Update" : "Save")}
           </button>
         </div>
       </div>

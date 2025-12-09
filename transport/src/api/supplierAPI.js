@@ -2,27 +2,42 @@ import apiClient from "./apiClient";
 
 export const supplierAPI = {
   // Get countries, states, cities
-  getCountries: async (orgId) => {
-    const res = await apiClient.get("/api/commonmaster/country", {
-      params: { orgid: orgId },
+  getCountries: async (orgid) => {
+    const response = await apiClient.get("/api/commonmaster/country", {
+      params: { orgid },
     });
-    return res?.data?.paramObjectsMap?.countryVO || [];
-  },
 
-  getStates: async (orgId, country) => {
-    const res = await apiClient.get("/api/commonmaster/state", {
-      params: { orgid: orgId, country },
+    return (
+      response?.data?.paramObjectsMap?.countryVO ||
+      response?.paramObjectsMap?.countryVO ||
+      []
+    );
+  },
+  // Get states
+  getStates: async (orgid, country) => {
+    const response = await apiClient.get("/api/commonmaster/state", {
+      params: { orgid, country },
     });
-    return res?.data?.paramObjectsMap?.stateVO || [];
-  },
 
-  getCities: async (orgId, state) => {
+    return (
+      response?.data?.paramObjectsMap?.stateVO ||
+      response?.paramObjectsMap?.stateVO ||
+      []
+    );
+  },
+  getCity: async (orgid, state) => {
     const res = await apiClient.get("/api/commonmaster/city/state", {
-      params: { orgid: orgId, state },
+      params: { orgid, state },
     });
-    return res?.data?.paramObjectsMap?.cityVO || [];
+    return res?.paramObjectsMap?.cityVO ?? [];
   },
 
+  // Get cities
+
+  // Add alias for getAllCities
+  getAllCities: async (state, orgid) => {
+    return supplierAPI.getCities(orgid, state);
+  },
   // Supplier CRUD operations
   getSuppliers: async (orgid, client, cbranch) => {
     const res = await apiClient.get("/api/warehousemastercontroller/supplier", {

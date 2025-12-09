@@ -1,16 +1,21 @@
-// ItemMasterForm.jsx
+// ItemMasterForm.jsx - FIXED VERSION
 import {
   ArrowLeft,
   Building,
   Plus,
   Save,
   Trash2,
-  X,
+  X,List,
+  Upload,
+  Download,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { masterAPI } from "../../../api/itemAPI";
+import { unitAPI } from "../../../api/unitAPI"; // ADD THIS IMPORT
 import { FloatingInput, FloatingSelect } from "../../../utils/InputFields";
 import { useToast } from "../../Toast/ToastContext";
+import CommonBulkUpload from "../../../utils/CommonBulkUpload";
+import * as XLSX from "xlsx";
 
 /* -----------------------------------------------
    MAIN COMPONENT
@@ -19,6 +24,11 @@ const ItemMasterForm = ({ editData, onBack, onSaveSuccess }) => {
   const ORG_ID = parseInt(localStorage.getItem("orgId")) || 1000000001;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState("pricing");
+  const [uploadOpen, setUploadOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState({
+    units: false,
+    groups: false
+  });
   
   const loginBranchCode = localStorage.getItem("branchcode") || "";
   const loginBranch = localStorage.getItem("branch") || "";
@@ -29,7 +39,7 @@ const ItemMasterForm = ({ editData, onBack, onSaveSuccess }) => {
 
   const [unitList, setUnitList] = useState([]);
   const [groupList, setGroupList] = useState([]);
-    const { addToast } = useToast(); // Get the toast function
+  const { addToast } = useToast();
 
   const [form, setForm] = useState({
     id: editData?.id || 0,
@@ -49,7 +59,7 @@ const ItemMasterForm = ({ editData, onBack, onSaveSuccess }) => {
     skuQty: editData?.skuQty || "",
     ssku: editData?.ssku || "",
     sskuQty: editData?.sskuQty || "",
-    weightSkuUom: editData?.weightOfSkuAndUom || "", // Fixed field name
+    weightSkuUom: editData?.weightOfSkuAndUom || "",
     hsnCode: editData?.hsnCode || "",
     controlBranch: editData?.cbranch || loginBranchCode,
     criticalStockLevel: editData?.criticalStockLevel || "",
@@ -72,9 +82,7 @@ const ItemMasterForm = ({ editData, onBack, onSaveSuccess }) => {
     getAllUnits();
     getAllGroups();
     
-    // If editing, populate the form data
     if (editData) {
-      // If the record has itemVo data, populate the itemTableData
       if (editData.itemVo && editData.itemVo.length > 0) {
         setItemTableData(
           editData.itemVo.map((item, index) => ({
@@ -88,27 +96,133 @@ const ItemMasterForm = ({ editData, onBack, onSaveSuccess }) => {
     }
   }, [editData]);
 
-  // Fetch all units
+  // FIXED: Fetch all units from unitAPI
   const getAllUnits = async () => {
     try {
-      const response = await masterAPI.getAllUnits();
-      if (response.status === true) {
-        setUnitList(response.paramObjectsMap?.unitVO || []);
+      setIsLoading(prev => ({ ...prev, units: true }));
+      console.log("📦 [ItemForm] Fetching units for orgId:", ORG_ID);
+      
+      const response = await unitAPI.getUnits(ORG_ID);
+      console.log("📦 [ItemForm] Units API Response:", response);
+
+      // Handle different response structures
+      let units = [];
+      if (Array.isArray(response)) {
+        units = response;
+      } else if (response?.data?.paramObjectsMap?.unitVO) {
+        units = response.data.paramObjectsMap.unitVO;
+      } else if (response?.paramObjectsMap?.unitVO) {
+        units = response.paramObjectsMap.unitVO;
+      } else if (response?.unitVO) {
+        units = response.unitVO;
+      }
+
+      if (units && units.length > 0) {
+        const sortedUnits = units
+          .filter(unit => unit.unitName) // Filter out null/undefined
+          .sort((a, b) => (a.unitName || "").localeCompare(b.unitName || ""));
+        
+        setUnitList(sortedUnits);
+        console.log("✅ [ItemForm] Units loaded:", sortedUnits.length);
+      } else {
+        console.warn("❌ [ItemForm] No units found in response");
+        setUnitList([]);
+        addToast("No units found", "warning");
       }
     } catch (error) {
-      console.error("Error fetching units:", error);
+      console.error("❌ [ItemForm] Error fetching units:", error);
+      addToast("Failed to fetch units", "error");
+      setUnitList([]);
+    } finally {
+      setIsLoading(prev => ({ ...prev, units: false }));
     }
   };
 
   // Fetch all groups
-  const getAllGroups = async () => {
+// Fetch all groups
+const getAllGroups = async () => {
+  try {
+    setIsLoading(prev => ({ ...prev, groups: true }));
+    const response = await masterAPI.getAllGroups(ORG_ID);
+    
+    // DEBUG: Log the entire response to see the structure
+    console.log("🏷️ [ItemForm] DEBUG - Full Groups Response:", response);
+    console.log("🏷️ [ItemForm] DEBUG - Response keys:", Object.keys(response));
+    console.log("🏷️ [ItemForm] DEBUG - paramObjectsMap:", response.paramObjectsMap);
+    console.log("🏷️ [ItemForm] DEBUG - groupVO:", response.paramObjectsMap?.groupVO);
+    
+    if (response.status === true) {
+      setGroupList(response.data.paramObjectsMap?.groupVO || []);
+      console.log("✅ [ItemForm] Groups loaded:", response.data.paramObjectsMap?.groupVO?.length || 0);
+    } else {
+      console.warn("❌ [ItemForm] No groups found in response");
+      setGroupList([]);
+    }
+  } catch (error) {
+    console.error("❌ [ItemForm] Error fetching groups:", error);
+    addToast("Failed to fetch groups", "error");
+    setGroupList([]);
+  } finally {
+    setIsLoading(prev => ({ ...prev, groups: false }));
+  }
+};
+  // Rest of your code remains the same...
+  // Bulk Upload Handlers
+  const handleBulkUploadOpen = () => setUploadOpen(true);
+  const handleBulkUploadClose = () => setUploadOpen(false);
+
+  const handleFileUpload = (file) => {
+    console.log("File to upload:", file);
+  };
+
+  const handleSubmitUpload = () => {
+    console.log("Submit upload");
+    handleBulkUploadClose();
+    addToast("Items uploaded successfully!", "success");
+  };
+
+  const handleDownloadSample = () => {
     try {
-      const response = await masterAPI.getAllGroups(ORG_ID);
-      if (response.status === true) {
-        setGroupList(response.paramObjectsMap?.groupVO || []);
-      }
+      const sampleData = [
+        {
+          "Item Type": "ITEM",
+          "Part No": "PART001",
+          "Part Description": "Sample Part Description",
+          "Customer Part No": "CUST001",
+          "Group Name": "ELECTRONICS",
+          "Style Code": "STYLE001",
+          "Base SKU": "BSKU001",
+          "Purchase Unit": "PCS",
+          "Storage Unit": "PCS",
+          "FSN": "123456",
+          "Sale Unit": "PCS",
+          "Type": "TYPE 1",
+          "SKU": "PCS",
+          "SKU Qty": "1",
+          "SSKU": "PCS",
+          "SSKU Qty": "1",
+          "Weight SKU UOM": "0.5",
+          "HSN Code": "85444290",
+          "Control Branch": loginBranchCode,
+          "Critical Stock Level": "10",
+          "Status": "R",
+          "Parent Child Key": "CHILD",
+          "Barcode": "1234567890123",
+          "SKU Category": "OPENSTORAGE",
+          "Moving Type": "FAST",
+          "Active": "Yes"
+        }
+      ];
+
+      const worksheet = XLSX.utils.json_to_sheet(sampleData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Sample Items");
+      const fileName = `Sample_Item_Upload_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      XLSX.writeFile(workbook, fileName);
+      addToast("Sample file downloaded successfully!", "success");
     } catch (error) {
-      console.error("Error fetching groups:", error);
+      console.error("Error downloading sample file:", error);
+      addToast("Failed to download sample file", "error");
     }
   };
 
@@ -150,15 +264,13 @@ const ItemMasterForm = ({ editData, onBack, onSaveSuccess }) => {
     setIsSubmitting(true);
 
     try {
-      // Create payload with correct API field names
       const payload = {
         ...(form.id && { id: form.id }),
         
-        // Map form field names to API expected field names
         itemType: form.itemType,
-        partno: form.partNo, // API uses partno
+        partno: form.partNo,
         partDesc: form.partDesc,
-        custPartno: form.custPartNo, // API uses custPartno
+        custPartno: form.custPartNo,
         groupName: form.groupName,
         styleCode: form.styleCode,
         baseSku: form.baseSku,
@@ -171,9 +283,9 @@ const ItemMasterForm = ({ editData, onBack, onSaveSuccess }) => {
         skuQty: form.skuQty,
         ssku: form.ssku,
         sskuQty: form.sskuQty,
-        weightOfSkuAndUom: form.weightSkuUom, // API uses weightOfSkuAndUom (capital O)
+        weightOfSkuAndUom: form.weightSkuUom,
         hsnCode: form.hsnCode,
-        cbranch: form.controlBranch, // API uses cbranch
+        cbranch: form.controlBranch,
         criticalStockLevel: form.criticalStockLevel,
         status: form.status,
         parentChildKey: form.parentChildKey,
@@ -182,7 +294,6 @@ const ItemMasterForm = ({ editData, onBack, onSaveSuccess }) => {
         movingType: form.movingType,
         active: form.active,
 
-        // Additional required fields from your old working code
         createdBy: loginUserName,
         branch: loginBranch,
         branchCode: loginBranchCode,
@@ -191,7 +302,6 @@ const ItemMasterForm = ({ editData, onBack, onSaveSuccess }) => {
         client: loginClient,
         orgId: ORG_ID,
         
-        // Pricing data
         itemVo: itemTableData.map((row) => ({
           mrp: row.mrp,
           fromdate: row.fDate ? formatDate(row.fDate) : "",
@@ -209,19 +319,10 @@ const ItemMasterForm = ({ editData, onBack, onSaveSuccess }) => {
         const successMessage = response?.paramObjectsMap?.message || 
           (form.id ? "Item updated successfully!" : "Item created successfully!");
         
-          // Show success toast
         addToast(successMessage, 'success');
-        
         onSaveSuccess && onSaveSuccess(form.id ? "updated" : "created");
-        
-        // Call success callback if provided
-        if (onSaveSuccess) {
-          onSaveSuccess();
-        }
-        
         onBack();
       } else {
-        // Handle specific error cases
         const errorMessage = response?.paramObjectsMap?.errorMessage ||
           response?.paramObjectsMap?.message ||
           response?.message ||
@@ -232,7 +333,6 @@ const ItemMasterForm = ({ editData, onBack, onSaveSuccess }) => {
     } catch (error) {
       console.error("❌ Save Error:", error);
       
-      // Handle specific error cases from the API response
       const errorMessage = error.response?.data?.paramObjectsMap?.errorMessage ||
         error.response?.data?.paramObjectsMap?.message ||
         error.response?.data?.message ||
@@ -247,7 +347,6 @@ const ItemMasterForm = ({ editData, onBack, onSaveSuccess }) => {
   const formatDate = (date) => {
     if (!date) return "";
     
-    // Format as DD-MM-YYYY like your old working code
     const d = new Date(date);
     const day = String(d.getDate()).padStart(2, '0');
     const month = String(d.getMonth() + 1).padStart(2, '0');
@@ -321,6 +420,7 @@ const ItemMasterForm = ({ editData, onBack, onSaveSuccess }) => {
     { value: "TYPE 2", label: "TYPE 2" },
   ];
 
+  // FIXED: Unit options with proper loading state
   const unitOptions = unitList.map(unit => ({
     value: unit.unitName,
     label: unit.unitName
@@ -334,17 +434,83 @@ const ItemMasterForm = ({ editData, onBack, onSaveSuccess }) => {
   return (
     <div className="p-4 max-w-7xl mx-auto">
       {/* HEADER */}
-      <div className="flex items-center gap-2 mb-4">
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-4">
+          <button
+            onClick={onBack}
+            className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+          <div>
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+              {editData ? "Edit Item" : "Create Item"}
+            </h2>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Create and manage item master entries
+            </p>
+          </div>
+        </div>
         <button
           onClick={onBack}
-          className="p-1 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+          className="flex items-center gap-2 px-4 py-2 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm"
         >
-          <ArrowLeft className="h-4 w-4" />
+          <List className="h-4 w-4" />
+          List View
         </button>
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-          {editData ? "Edit Item" : "Add Item"}
-        </h2>
       </div>
+
+      {/* ACTION BUTTONS - With Upload and Download */}
+      <div className="flex gap-2 mb-6 flex-wrap">
+        <button
+          onClick={handleSave}
+          disabled={isSubmitting}
+          className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <Save className="h-3 w-3" />
+          {isSubmitting ? "Saving..." : (editData ? "Update" : "Save")}
+        </button>
+        
+        <button
+          onClick={handleBulkUploadOpen}
+          className="flex items-center gap-2 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded text-xs transition-colors"
+        >
+          <Upload className="h-3 w-3" />
+          Upload
+        </button>
+        
+        <button
+          onClick={handleDownloadSample}
+          className="flex items-center gap-2 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded text-xs transition-colors"
+        >
+          <Download className="h-3 w-3" />
+          Download Sample
+        </button>
+      </div>
+
+      {/* Loading States */}
+      {isLoading.units && (
+        <div className="flex justify-center items-center py-2 mb-4">
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+          <span className="ml-2 text-sm text-gray-600">Loading units...</span>
+        </div>
+      )}
+
+      {/* Bulk Upload Modal */}
+      {uploadOpen && (
+        <CommonBulkUpload
+          open={uploadOpen}
+          handleClose={handleBulkUploadClose}
+          title="Upload Items"
+          uploadText="Upload Excel File"
+          downloadText="Download Sample"
+          onSubmit={handleSubmitUpload}
+          sampleFileDownload={null}
+          handleFileUpload={handleFileUpload}
+          apiUrl={`/api/warehousemastercontroller/MaterialUpload?branch=${loginBranch}&branchCode=${loginBranchCode}&client=${loginClient}&createdBy=${loginUserName}&customer=${loginCustomer}&orgId=${ORG_ID}&warehouse=${loginWarehouse}`}
+          screen="Item Master"
+        />
+      )}
 
       {/* MAIN CARD */}
       <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
@@ -383,12 +549,13 @@ const ItemMasterForm = ({ editData, onBack, onSaveSuccess }) => {
             onChange={handleChange}
           />
 
-          <FloatingSelect
+         <FloatingSelect
             label="Group Name"
             name="groupName"
             value={form.groupName}
             onChange={(value) => handleSelectChange("groupName", value)}
             options={groupOptions}
+            disabled={isLoading.groups}
           />
 
           <FloatingInput
@@ -402,15 +569,17 @@ const ItemMasterForm = ({ editData, onBack, onSaveSuccess }) => {
             label="Base SKU"
             name="baseSku"
             value={form.baseSku}
-            onChange={handleChange}
+            onChange={(value) => handleSelectChange("baseSku", value)}
           />
 
+          {/* FIXED: Unit dropdowns with proper loading state */}
           <FloatingSelect
             label="Purchase Unit"
             name="purchaseUnit"
             value={form.purchaseUnit}
             onChange={(value) => handleSelectChange("purchaseUnit", value)}
             options={unitOptions}
+            disabled={isLoading.units}
           />
 
           <FloatingSelect
@@ -419,6 +588,7 @@ const ItemMasterForm = ({ editData, onBack, onSaveSuccess }) => {
             value={form.storageUnit}
             onChange={(value) => handleSelectChange("storageUnit", value)}
             options={unitOptions}
+            disabled={isLoading.units}
           />
 
           <FloatingSelect
@@ -428,6 +598,7 @@ const ItemMasterForm = ({ editData, onBack, onSaveSuccess }) => {
             onChange={(value) => handleSelectChange("sku", value)}
             options={unitOptions}
             error={fieldErrors.sku}
+            disabled={isLoading.units}
             required
           />
 
@@ -438,6 +609,7 @@ const ItemMasterForm = ({ editData, onBack, onSaveSuccess }) => {
             onChange={(value) => handleSelectChange("ssku", value)}
             options={unitOptions}
             error={fieldErrors.ssku}
+            disabled={isLoading.units}
             required
           />
 
@@ -496,6 +668,7 @@ const ItemMasterForm = ({ editData, onBack, onSaveSuccess }) => {
             value={form.saleUnit}
             onChange={(value) => handleSelectChange("saleUnit", value)}
             options={unitOptions}
+            disabled={isLoading.units}
           />
 
           <FloatingSelect
@@ -542,25 +715,16 @@ const ItemMasterForm = ({ editData, onBack, onSaveSuccess }) => {
             value={form.criticalStockLevel}
             onChange={handleChange}
           />
-
-          <FloatingInput
-            label="Barcode"
-            name="barcode"
-            value={form.barcode}
-            onChange={handleChange}
-            className="md:col-span-2"
-          />
-
-          {/* ACTIVE CHECKBOX */}
-          <div className="flex items-center gap-2 p-1 md:col-span-2 lg:col-span-5">
+          
+          <div className="flex items-center gap-2 p-1">
             <input
               type="checkbox"
               name="active"
               checked={form.active}
-              onChange={(e) => setForm(prev => ({ ...prev, active: e.target.checked }))}
-              className="h-3 w-3 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+              onChange={handleChange}
+              className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
             />
-            <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
               Active
             </span>
           </div>
@@ -658,25 +822,6 @@ const ItemMasterForm = ({ editData, onBack, onSaveSuccess }) => {
             </div>
           </div>
         )}
-
-        {/* ACTION BUTTONS */}
-        <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
-          <button
-            onClick={onBack}
-            disabled={isSubmitting}
-            className="flex items-center gap-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded text-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
-          >
-            <X className="h-3 w-3" /> Cancel
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={isSubmitting}
-            className="flex items-center gap-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Save className="h-3 w-3" /> 
-            {isSubmitting ? "Saving..." : (editData ? "Update" : "Save")}
-          </button>
-        </div>
       </div>
     </div>
   );
