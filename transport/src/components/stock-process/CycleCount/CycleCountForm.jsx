@@ -12,6 +12,7 @@ import {
   Filter,
 } from "lucide-react";
 import { cyclecountAPI } from "../../../api/cyclecountAPI";
+import { FloatingInput,FloatingSelect } from "../../../utils/InputFields";
 import dayjs from "dayjs";
 
 const CycleCountForm = ({ editData, onBack, onSaveSuccess }) => {
@@ -54,97 +55,6 @@ const CycleCountForm = ({ editData, onBack, onSaveSuccess }) => {
   const [cycleCountItems, setCycleCountItems] = useState([]);
   const [editId, setEditId] = useState("");
 
-  // Fixed FloatingInput Component
-  const FloatingInput = ({ label, name, value, onChange, error, required = false, type = "text", disabled = false, ...props }) => {
-    const inputRef = useRef(null);
-    const [isFocused, setIsFocused] = useState(false);
-    
-    useEffect(() => {
-      // Update focus state based on value
-      if (value) {
-        setIsFocused(true);
-      }
-    }, [value]);
-    
-    return (
-      <div className="relative">
-        <input
-          ref={inputRef}
-          type={type}
-          name={name}
-          value={value}
-          onChange={onChange}
-          onFocus={() => setIsFocused(true)}
-          onBlur={() => setIsFocused(value ? true : false)}
-          disabled={disabled}
-          className={`peer w-full px-3 py-3 pt-5 text-sm border rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 ${
-            error ? "border-red-500" : "border-gray-200 dark:border-gray-600"
-          } ${disabled ? "bg-gray-100 dark:bg-gray-600 cursor-not-allowed" : ""}`}
-          placeholder=" "
-          {...props}
-        />
-        <label 
-          className={`absolute left-3 transition-all duration-200 pointer-events-none ${
-            value || isFocused 
-              ? "top-1 text-xs text-blue-600 dark:text-blue-400" 
-              : "top-3 text-sm text-gray-500 dark:text-gray-400"
-          } bg-white dark:bg-gray-700 px-1`}
-          onClick={() => inputRef.current?.focus()}
-        >
-          {label} {required && <span className="text-red-500">*</span>}
-        </label>
-        {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
-      </div>
-    );
-  };
-
-  // Fixed FloatingSelect Component
-  const FloatingSelect = ({ label, name, value, onChange, options, error, required = false, disabled = false, ...props }) => {
-    const [isFocused, setIsFocused] = useState(false);
-    const selectRef = useRef(null);
-    
-    useEffect(() => {
-      if (value) {
-        setIsFocused(true);
-      }
-    }, [value]);
-    
-    return (
-      <div className="relative">
-        <select
-          ref={selectRef}
-          name={name}
-          value={value}
-          onChange={(e) => onChange(name, e.target.value)}
-          onFocus={() => setIsFocused(true)}
-          onBlur={() => setIsFocused(value ? true : false)}
-          disabled={disabled}
-          className={`peer w-full px-3 py-3 pt-5 text-sm border rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500 focus:border-blue-500 appearance-none transition-all duration-200 ${
-            error ? "border-red-500" : "border-gray-200 dark:border-gray-600"
-          } ${disabled ? "bg-gray-100 dark:bg-gray-600 cursor-not-allowed" : ""}`}
-          {...props}
-        >
-          <option value="" className="text-gray-400">Select {label}</option>
-          {options?.map((option) => (
-            <option key={option.value || option} value={option.value || option}>
-              {option.label || option}
-            </option>
-          ))}
-        </select>
-        <label 
-          className={`absolute left-3 transition-all duration-200 pointer-events-none ${
-            value || isFocused 
-              ? "top-1 text-xs text-blue-600 dark:text-blue-400" 
-              : "top-3 text-sm text-gray-500 dark:text-gray-400"
-          } bg-white dark:bg-gray-700 px-1`}
-          onClick={() => selectRef.current?.focus()}
-        >
-          {label} {required && <span className="text-red-500">*</span>}
-        </label>
-        {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
-      </div>
-    );
-  };
 
   // Initialize data
   useEffect(() => {

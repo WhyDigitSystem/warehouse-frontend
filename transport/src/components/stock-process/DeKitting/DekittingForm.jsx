@@ -20,6 +20,7 @@ import {
 import { deKittingService } from "../../../api/dekittingAPI";
 import { warehouseService } from "../../../api/warehouseService";
 import { useToast } from "../../Toast/ToastContext";
+import { FloatingInput,FloatingSelect } from "../../../utils/InputFields";
 import {
   formatDateForInput,
   formatDateForDisplay,
@@ -754,30 +755,6 @@ const DeKittingForm = ({ editData, onBack, onSaveSuccess }) => {
       setIsSubmitting(false);
     }
   };
-
-  // UI Components
-  const FloatingInput = ({ label, name, value, onChange, error, required = false, type = "text", disabled = false, ...props }) => (
-    <div className="relative">
-      <input
-        type={type}
-        name={name}
-        value={value}
-        onChange={onChange}
-        disabled={disabled}
-        className={`w-full px-3 py-2 text-sm border rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500 focus:border-blue-500 ${
-          error ? "border-red-500" : "border-gray-200 dark:border-gray-600"
-        } ${disabled ? "bg-gray-100 dark:bg-gray-600 cursor-not-allowed" : ""}`}
-        placeholder=" "
-        {...props}
-      />
-      <label className={`absolute left-3 top-2 text-gray-500 dark:text-gray-400 transition-all duration-200 pointer-events-none peer-focus:top-[-10px] peer-focus:text-xs peer-focus:text-blue-600 peer-focus:dark:text-blue-400 peer-placeholder-shown:top-2 peer-placeholder-shown:text-sm ${
-        value ? "top-[-10px] text-xs text-blue-600 dark:text-blue-400" : ""
-      } bg-white dark:bg-gray-700 px-1`}>
-        {label} {required && <span className="text-red-500">*</span>}
-      </label>
-      {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
-    </div>
-  );
 
   return (
     <div className="p-4 max-w-7xl mx-auto">
