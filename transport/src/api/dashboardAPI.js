@@ -2,9 +2,267 @@
 import apiClient from "./apiClient";
 
 export const dashboardAPI = {
-  // Get GRN data
+  // Get stock consolidation report
+  // Update the getOverallStock function in dashboardAPI.js
+  getOverallStock: async (payload) => {
+    try {
+      console.log("📦 Sending stock consolidation request:", payload);
+
+      // Use GET method with query parameters
+      const response = await apiClient.get(
+        "/api/Reports/getStockConsolidation",
+        {
+          params: payload, // Send payload as query parameters
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      console.log("📦 Stock consolidation API response:", response);
+
+      // Handle different response structures
+      let responseData;
+
+      // If response has data property (standard axios response)
+      if (response && response.data) {
+        console.log("📍 Response has data property");
+        responseData = response.data;
+      }
+      // If response is already the data object
+      else if (response && response.statusFlag) {
+        console.log("📍 Response is direct data object");
+        responseData = response;
+      }
+      // If response is something else
+      else {
+        console.log("📍 Response structure unknown");
+        responseData = response;
+      }
+
+      console.log("📊 Processed Stock Response Data:", responseData);
+
+      if (
+        responseData &&
+        (responseData.status === true || responseData.statusFlag === "Ok")
+      ) {
+        console.log("✅ API returned success status");
+
+        // Extract stock details from response
+        let stockDetails = [];
+
+        // Based on your response, the data is in paramObjectsMap.stockDetails
+        if (
+          responseData.paramObjectsMap &&
+          responseData.paramObjectsMap.stockDetails
+        ) {
+          stockDetails = responseData.paramObjectsMap.stockDetails;
+          console.log("📍 Found data in paramObjectsMap.stockDetails");
+        } else if (responseData.stockDetails) {
+          stockDetails = responseData.stockDetails;
+          console.log("📍 Found data in stockDetails");
+        }
+
+        console.log("📦 Extracted Stock Details:", stockDetails);
+
+        // Calculate total stock from avlQty values
+        let totalStock = 0;
+        let partCount = 0;
+
+        if (stockDetails && Array.isArray(stockDetails)) {
+          partCount = stockDetails.length;
+
+          totalStock = stockDetails.reduce((sum, item) => {
+            // Parse avlQty to number
+            const qty = Number(item.avlQty) || 0;
+            console.log(`📊 Adding qty: ${qty} for part ${item.partNo}`);
+            return sum + qty;
+          }, 0);
+
+          console.log("📊 Calculated Total Stock:", totalStock);
+          console.log("📊 Part Count:", partCount);
+
+          return {
+            status: true,
+            totalStock,
+            partCount,
+            itemCount: totalStock, // itemCount is same as totalStock
+            stockDetails,
+            rawResponse: responseData,
+          };
+        } else {
+          console.log("📦 No stock details found or not an array");
+          return {
+            status: true,
+            totalStock: 0,
+            partCount: 0,
+            itemCount: 0,
+            stockDetails: [],
+            rawResponse: responseData,
+          };
+        }
+      } else {
+        console.error("❌ Stock API returned error status:", responseData);
+        return {
+          status: false,
+          error: responseData?.message || "API returned error status",
+          totalStock: 0,
+          partCount: 0,
+          itemCount: 0,
+          stockDetails: [],
+          rawResponse: responseData,
+        };
+      }
+    } catch (error) {
+      console.error("❌ Stock consolidation API error:", {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        config: error.config,
+      });
+
+      return {
+        status: false,
+        error:
+          error.response?.data?.message || error.message || "Network error",
+        totalStock: 0,
+        partCount: 0,
+        itemCount: 0,
+        stockDetails: [],
+      };
+    }
+  },
+
+  // Get Warehouse Occupancy
+  getWarehouseOccupancy: async (orgId, branchCode, warehouse, client) => {
+    try {
+      console.log("🔍 API Call - Warehouse Occupancy:", {
+        url: "/api/dashboardController/getBinDetailsForClientWise",
+        params: { orgId, branchCode, warehouse, client },
+      });
+
+      const response = await apiClient.get(
+        "/api/dashboardController/getBinDetailsForClientWise",
+        {
+          params: {
+            orgId,
+            branchCode,
+            warehouse,
+            client,
+          },
+        }
+      );
+
+      console.log("✅ Full API Response:", response);
+
+      let responseData;
+
+      if (response && response.statusFlag) {
+        console.log("📍 Response is direct data object");
+        responseData = response;
+      } else if (response && response.data) {
+        console.log("📍 Response has data property");
+        responseData = response.data;
+      } else {
+        console.log("📍 Response structure unknown");
+        responseData = response;
+      }
+
+      console.log("📊 Processed Response Data:", responseData);
+
+      if (!responseData) {
+        console.error("❌ No response data");
+        return {
+          status: false,
+          binDetails: [],
+          occupied: 0,
+          available: 0,
+          total: 0,
+          error: "No response data",
+        };
+      }
+
+      const isStatusOk =
+        responseData.status === true || responseData.statusFlag === "Ok";
+
+      if (isStatusOk) {
+        let binDetails = [];
+
+        if (responseData.paramObjectsMap?.binDetails) {
+          binDetails = responseData.paramObjectsMap.binDetails;
+          console.log("📍 Found data in paramObjectsMap.binDetails");
+        } else if (responseData.binDetails) {
+          binDetails = responseData.binDetails;
+          console.log("📍 Found data in binDetails");
+        }
+
+        console.log("📦 Bin Details Count:", binDetails.length);
+
+        if (binDetails.length > 0) {
+          console.log("📦 Sample bin:", binDetails[0]);
+        }
+
+        const occupied = binDetails.filter(
+          (bin) => bin?.binStatus === "Occupied"
+        ).length;
+        const available = binDetails.filter(
+          (bin) => bin?.binStatus === "Empty"
+        ).length;
+
+        console.log("📈 Occupancy Stats:", {
+          occupied,
+          available,
+          total: binDetails.length,
+          percentage:
+            binDetails.length > 0
+              ? Math.round((occupied / binDetails.length) * 100)
+              : 0,
+        });
+
+        return {
+          status: true,
+          binDetails,
+          occupied,
+          available,
+          total: binDetails.length,
+          rawResponse: responseData,
+        };
+      } else {
+        console.error("❌ API returned error status");
+        return {
+          status: false,
+          binDetails: [],
+          occupied: 0,
+          available: 0,
+          total: 0,
+          error: "API returned error status",
+          rawResponse: responseData,
+        };
+      }
+    } catch (error) {
+      console.error("💥 API Error:", {
+        message: error.message,
+        code: error.code,
+        response: error.response,
+        config: error.config,
+      });
+
+      return {
+        status: false,
+        binDetails: [],
+        occupied: 0,
+        available: 0,
+        total: 0,
+        error: error.message || "Network error",
+      };
+    }
+  },
+
+  // Get GRN Data
   getGRNData: async (orgId, branchCode, client, finYear, warehouse, month) => {
     try {
+      console.log("🔍 API Call - GRN Data");
+
       const response = await apiClient.get(
         "/api/grn/getGrnStatusForDashBoard",
         {
@@ -19,10 +277,20 @@ export const dashboardAPI = {
         }
       );
 
-      if (response?.data?.status === true) {
-        const grnData = response.data.paramObjectsMap?.grnDashboard || [];
+      let responseData = response?.statusFlag
+        ? response
+        : response?.data || response;
+
+      if (responseData?.status === true) {
+        const grnData = responseData.paramObjectsMap?.grnDashboard || [];
         const pending = grnData.filter((item) => item.status === "Pending");
         const completed = grnData.filter((item) => item.status === "Complete");
+
+        console.log("✅ GRN Data:", {
+          pending: pending.length,
+          completed: completed.length,
+        });
+
         return { pending, completed };
       }
       return { pending: [], completed: [] };
@@ -32,7 +300,7 @@ export const dashboardAPI = {
     }
   },
 
-  // Get Putaway data
+  // Get Putaway Data
   getPutawayData: async (orgId, branchCode, client, finYear, month) => {
     try {
       const response = await apiClient.get(
@@ -48,9 +316,13 @@ export const dashboardAPI = {
         }
       );
 
-      if (response?.data?.status === true) {
+      let responseData = response?.statusFlag
+        ? response
+        : response?.data || response;
+
+      if (responseData?.status === true) {
         const putawayData =
-          response.data.paramObjectsMap?.putawayDashboard || [];
+          responseData.paramObjectsMap?.putawayDashboard || [];
         const pending = putawayData.filter((item) => item.status === "Pending");
         const completed = putawayData.filter(
           (item) => item.status === "Complete"
@@ -64,7 +336,7 @@ export const dashboardAPI = {
     }
   },
 
-  // Get Buyer Order data
+  // Get Buyer Order Data
   getBuyerOrderData: async (orgId, branchCode, client, finYear, warehouse) => {
     try {
       const response = await apiClient.get(
@@ -80,9 +352,13 @@ export const dashboardAPI = {
         }
       );
 
-      if (response?.data?.status === true) {
+      let responseData = response?.statusFlag
+        ? response
+        : response?.data || response;
+
+      if (responseData?.status === true) {
         const buyerOrderData =
-          response.data.paramObjectsMap?.buyerorderDashboard || [];
+          responseData.paramObjectsMap?.buyerorderDashboard || [];
         const pending = buyerOrderData.filter(
           (item) => item.status === "Pending"
         );
@@ -98,7 +374,7 @@ export const dashboardAPI = {
     }
   },
 
-  // Get Pick Request data
+  // Get Pick Request Data
   getPickRequestData: async (orgId, branchCode, client, finYear) => {
     try {
       const response = await apiClient.get(
@@ -113,9 +389,13 @@ export const dashboardAPI = {
         }
       );
 
-      if (response?.data?.status === true) {
+      let responseData = response?.statusFlag
+        ? response
+        : response?.data || response;
+
+      if (responseData?.status === true) {
         const pickRequestData =
-          response.data.paramObjectsMap?.picrequestDashboard || [];
+          responseData.paramObjectsMap?.picrequestDashboard || [];
         const pending = pickRequestData.filter(
           (item) => item.status === "Pending"
         );
@@ -128,60 +408,6 @@ export const dashboardAPI = {
     } catch (error) {
       console.error("Error fetching pick request data:", error);
       return { pending: [], completed: [] };
-    }
-  },
-
-  // Get Warehouse Occupancy
-  getWarehouseOccupancy: async (orgId, branchCode, warehouse, client) => {
-    try {
-      const response = await apiClient.get(
-        "/api/dashboardController/getBinDetailsForClientWise",
-        {
-          params: {
-            orgId,
-            branchCode,
-            warehouse,
-            client,
-          },
-        }
-      );
-
-      if (response?.data?.statusFlag === "Ok") {
-        const binDetails = response.data.paramObjectsMap?.binDetails || [];
-
-        // Calculate counts from bin details
-        const occupied = binDetails.filter(
-          (bin) => bin.binStatus === "Occupied"
-        ).length;
-        const available = binDetails.filter(
-          (bin) => bin.binStatus === "Empty"
-        ).length;
-
-        return {
-          status: true,
-          binDetails: binDetails,
-          occupied,
-          available,
-          total: binDetails.length,
-        };
-      }
-
-      return {
-        status: false,
-        binDetails: [],
-        occupied: 0,
-        available: 0,
-        total: 0,
-      };
-    } catch (error) {
-      console.error("Error fetching warehouse occupancy:", error);
-      return {
-        status: false,
-        binDetails: [],
-        occupied: 0,
-        available: 0,
-        total: 0,
-      };
     }
   },
 
@@ -199,12 +425,46 @@ export const dashboardAPI = {
         }
       );
 
-      if (response?.data?.paramObjectsMap?.storageDetails) {
-        return response.data.paramObjectsMap.storageDetails || [];
+      let responseData = response?.statusFlag
+        ? response
+        : response?.data || response;
+
+      if (responseData?.status === true || responseData?.statusFlag === "Ok") {
+        return responseData.paramObjectsMap?.storageDetails || [];
       }
       return [];
     } catch (error) {
       console.error("Error fetching storage details:", error);
+      return [];
+    }
+  },
+
+  // Get Bin Details
+  getBinDetails: async (orgId, branchCode, warehouse, client, bin) => {
+    try {
+      const response = await apiClient.get(
+        "/api/dashboardController/getBinDetails",
+        {
+          params: {
+            orgId,
+            branchCode,
+            warehouse,
+            client,
+            bin,
+          },
+        }
+      );
+
+      let responseData = response?.statusFlag
+        ? response
+        : response?.data || response;
+
+      if (responseData?.status === true || responseData?.statusFlag === "Ok") {
+        return responseData.paramObjectsMap?.binDetails || [];
+      }
+      return [];
+    } catch (error) {
+      console.error("Error fetching bin details:", error);
       return [];
     }
   },
@@ -221,8 +481,12 @@ export const dashboardAPI = {
         },
       });
 
-      if (response?.data?.status) {
-        const stockData = response.data.paramObjectsMap?.stockSummary || {};
+      let responseData = response?.statusFlag
+        ? response
+        : response?.data || response;
+
+      if (responseData?.status === true) {
+        const stockData = responseData.paramObjectsMap?.stockSummary || {};
         return {
           fastMoving: stockData.fastMoving || 0,
           slowMoving: stockData.slowMoving || 0,
@@ -250,29 +514,15 @@ export const dashboardAPI = {
     }
   },
 
-  // Get Today's Inbound/Outbound counts
-  getTodayCounts: async (orgId, branchCode, client, warehouse) => {
+  // Test connection
+  testConnection: async () => {
     try {
-      const today = new Date().toISOString().split("T")[0];
-
-      // You might need to adjust these API endpoints based on your backend
-      const inboundResponse = await apiClient.get(
-        "/api/inbound/getTodayCount",
-        { params: { orgId, branchCode, client, warehouse, date: today } }
-      );
-
-      const outboundResponse = await apiClient.get(
-        "/api/outbound/getTodayCount",
-        { params: { orgId, branchCode, client, warehouse, date: today } }
-      );
-
-      return {
-        inboundToday: inboundResponse?.data?.count || 0,
-        outboundToday: outboundResponse?.data?.count || 0,
-      };
+      const response = await apiClient.get("/");
+      console.log("Connection test response:", response);
+      return { success: true, data: response };
     } catch (error) {
-      console.error("Error fetching today's counts:", error);
-      return { inboundToday: 0, outboundToday: 0 };
+      console.error("Connection test failed:", error);
+      return { success: false, error: error.message };
     }
   },
 };
